@@ -38,26 +38,7 @@ def download_file(url, path):
                 f.write(chunk)
 
 # -------------------- COLORIZATION MODEL --------------------
-def write_prototxt(path):
-    prototxt_content = """
-    name: "Colorization"
-    layer {
-      name: "input"
-      type: "Input"
-      top: "data_l"
-      input_param { shape { dim: 1 dim: 1 dim: 224 dim: 224 } }
-    }
-    layer {
-      name: "conv1_1"
-      type: "Convolution"
-      bottom: "data_l"
-      top: "conv1_1"
-      convolution_param { num_output: 64 kernel_size: 3 stride: 1 pad: 1 }
-    }
-# (shortened but valid minimal structure)
-"""
-    with open(path, "w") as f:
-        f.write(prototxt_content)
+
 @st.cache_resource
 def load_color_model():
     os.makedirs("models", exist_ok=True)
@@ -66,20 +47,24 @@ def load_color_model():
     model = "models/colorization_release_v2.caffemodel"
     points = "models/pts_in_hull.npy"
 
-    # small files (GitHub OK)
-    if os.path.exists(prototxt):
-        os.remove(prototxt)
+    # ✅ Direct working links
+    if not os.path.exists(prototxt):
+        download_file(
+            "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/colorization_deploy_v2.prototxt",
+            prototxt
+        )
 
-    write_prototxt(prototxt)
-    # Points file
-    
+    if not os.path.exists(points):
+        download_file(
+            "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/pts_in_hull.npy",
+            points
+        )
 
-    # 🔥 BIG MODEL (Google Drive - stable)
-    download(
-        "https://drive.google.com/uc?export=download&id=1y7qQzLwF3W8UuP3z6u7t6n2G2x0Kp7Yp",
-        model,
-        50000000
-    )
+    if not os.path.exists(model):
+        download_file(
+            "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_colorization_20170828/colorization_release_v2.caffemodel",
+            model
+        )
 
     net = cv2.dnn.readNetFromCaffe(prototxt, model)
     pts = np.load(points)
