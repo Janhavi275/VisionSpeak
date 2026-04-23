@@ -28,12 +28,48 @@ processor, caption_model, tokenizer, translation_model, device = load_models()
 import os
 import urllib.request
 
-@st.cache_resource
+def load_color_model():
+    os.makedirs("models", exist_ok=True)
+
+    prototxt = "models/colorization_deploy_v2.prototxt"
+    model = "models/colorization_release_v2.caffemodel"
+    points = "models/pts_in_hull.npy"
+
+    if not os.path.exists(prototxt):
+        urllib.request.urlretrieve(
+            "https://raw.githubusercontent.com/richzhang/colorization/master/models/colorization_deploy_v2.prototxt",
+            prototxt
+        )
+
+    if not os.path.exists(model):
+        urllib.request.urlretrieve(
+            "https://github.com/richzhang/colorization/releases/download/v2.0/colorization_release_v2.caffemodel",
+            model
+        )
+
+    if not os.path.exists(points):
+        urllib.request.urlretrieve(
+            "https://raw.githubusercontent.com/richzhang/colorization/master/resources/pts_in_hull.npy",
+            points
+        )
+
+    net = cv2.dnn.readNetFromCaffe(prototxt, model)
+    pts = np.load(points)
+
+    class8 = net.getLayerId("class8_ab")
+    conv8 = net.getLayerId("conv8_313_rh")
+
+    pts = pts.transpose().reshape(2, 313, 1, 1)
+    net.getLayer(class8).blobs = [pts.astype("float32")]
+    net.getLayer(conv8).blobs = [np.full([1, 313], 2.606, dtype="float32")]
+
+    return net
+    
 def get_color_model():
     return load_color_model()
 
 def colorize_image(image):
-    net = get_color_model()   # ✅ FIX: always load model here
+    net = load_color_model()   
 
     img = np.array(image)
 
@@ -58,6 +94,8 @@ def colorize_image(image):
     colorized = np.clip(colorized, 0, 1)
 
     return (colorized * 255).astype("uint8")
+
+
 
 # -------------------- IMAGE ENHANCEMENT --------------------
 
@@ -75,32 +113,6 @@ def enhance_image(image):
 
     return Image.fromarray(enhanced_img)
 
-# -------------------- COLORIZATION --------------------
-
-def colorize_image(image):
-    img = np.array(image)
-
-    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    img = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
-
-    scaled = img.astype("float32") / 255.0
-    lab = cv2.cvtColor(scaled, cv2.COLOR_RGB2LAB)
-
-    resized = cv2.resize(lab, (224, 224))
-    L = cv2.split(resized)[0]
-    L -= 50
-
-    net.setInput(cv2.dnn.blobFromImage(L))
-    ab = net.forward()[0, :, :, :].transpose((1, 2, 0))
-
-    ab = cv2.resize(ab, (img.shape[1], img.shape[0]))
-    L = cv2.split(lab)[0]
-
-    colorized = np.concatenate((L[:, :, np.newaxis], ab), axis=2)
-    colorized = cv2.cvtColor(colorized, cv2.COLOR_LAB2RGB)
-    colorized = np.clip(colorized, 0, 1)
-
-    return (colorized * 255).astype("uint8")
 
 # -------------------- CAPTION --------------------
 
@@ -132,24 +144,28 @@ mode = st.radio("Select Mode", ["Enhancement", "Colorization"])
 file = st.file_uploader("Upload Image", type=["jpg", "png"])
 
 if file:
-    image = Image.open(file).convert("RGB")
+    try:
+        image = Image.open(file).convert("RGB")
 
-    st.subheader("📷 Original Image")
-    st.image(image, use_column_width=True)
+        st.subheader("📷 Original Image")
+        st.image(image, use_column_width=True)
 
-    if mode == "Enhancement":
-        output_image = enhance_image(image)
-    else:
-        output_image = colorize_image(image)
+        if mode == "Enhancement":
+            output_image = enhance_image(image)
+        else:
+            output_image = colorize_image(image)
 
-    caption = generate_caption(image)
-    hindi = translate_caption(caption)
+        caption = generate_caption(image)
+        hindi = translate_caption(caption)
 
-    st.subheader("🎨 Processed Image")
-    st.image(output_image, use_column_width=True)
+        st.subheader("🎨 Processed Image")
+        st.image(output_image, use_column_width=True)
 
-    st.subheader("📝 Caption (English)")
-    st.success(caption)
+        st.subheader("📝 Caption (English)")
+        st.success(caption)
 
-    st.subheader("🌍 Caption (Hindi)")
-    st.info(hindi)
+        st.subheader("🌍 Caption (Hindi)")
+        st.info(hindi)
+
+    except Exception as e:
+        st.error(f"Error occurred: {e}")
