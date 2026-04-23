@@ -28,6 +28,7 @@ processor, caption_model, tokenizer, translation_model, device = load_models()
 import os
 import urllib.request
 
+@st.cache_resource
 def load_color_model():
     os.makedirs("models", exist_ok=True)
 
@@ -35,24 +36,31 @@ def load_color_model():
     model = "models/colorization_release_v2.caffemodel"
     points = "models/pts_in_hull.npy"
 
-    if not os.path.exists(prototxt):
-        urllib.request.urlretrieve(
-            "https://raw.githubusercontent.com/dhananjayan-r/Colorizer/b39b5d474580377a428051ce572db340da21efe4/models/models_colorization_deploy_v2.prototxt",
-            prototxt
-        )
+    def download(url, path, min_size):
+        if not os.path.exists(path) or os.path.getsize(path) < min_size:
+            if os.path.exists(path):
+                os.remove(path)
+            urllib.request.urlretrieve(url, path)
 
-    if not os.path.exists(model):
-        urllib.request.urlretrieve(
-            "https://raw.githubusercontent.com/dhananjayan-r/Colorizer/b39b5d474580377a428051ce572db340da21efe4/models/colorization_release_v2.caffemodel",
-            model
-        )
+    # ✅ Stable OpenCV links
+    download(
+        "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/colorization_deploy_v2.prototxt",
+        prototxt,
+        10000
+    )
 
-    if not os.path.exists(points):
-        urllib.request.urlretrieve(
-            "https://raw.githubusercontent.com/dhananjayan-r/Colorizer/b39b5d474580377a428051ce572db340da21efe4/models/pts_in_hull.npy",
-            points
-        )
-        
+    download(
+        "https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_colorization_20170828/colorization_release_v2.caffemodel",
+        model,
+        50000000
+    )
+
+    download(
+        "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/pts_in_hull.npy",
+        points,
+        10000
+    )
+
     net = cv2.dnn.readNetFromCaffe(prototxt, model)
     pts = np.load(points)
 
@@ -65,8 +73,6 @@ def load_color_model():
 
     return net
     
-def get_color_model():
-    return load_color_model()
 
 def colorize_image(image):
     net = load_color_model()   
