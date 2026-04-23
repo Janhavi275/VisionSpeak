@@ -50,11 +50,10 @@ def load_color_model():
     )
 
     download(
-        "https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_colorization_20170828/colorization_release_v2.caffemodel",
+        "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_colorization_20170828/colorization_release_v2.caffemodel",
         model,
         50000000
     )
-
     download(
         "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/pts_in_hull.npy",
         points,
