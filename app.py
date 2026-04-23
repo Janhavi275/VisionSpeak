@@ -37,19 +37,19 @@ def load_color_model():
 
     if not os.path.exists(prototxt):
         urllib.request.urlretrieve(
-            "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/colorization_deploy_v2.prototxt",
+            "https://raw.githubusercontent.com/dhananjayan-r/Colorizer/b39b5d474580377a428051ce572db340da21efe4/models/models_colorization_deploy_v2.prototxt",
             prototxt
         )
 
     if not os.path.exists(model):
         urllib.request.urlretrieve(
-            "https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_colorization_20170828/colorization_release_v2.caffemodel",
+            "https://raw.githubusercontent.com/dhananjayan-r/Colorizer/b39b5d474580377a428051ce572db340da21efe4/models/colorization_release_v2.caffemodel",
             model
         )
 
     if not os.path.exists(points):
         urllib.request.urlretrieve(
-            "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/pts_in_hull.npy",
+            "https://raw.githubusercontent.com/dhananjayan-r/Colorizer/b39b5d474580377a428051ce572db340da21efe4/models/pts_in_hull.npy",
             points
         )
         
