@@ -25,12 +25,35 @@ def load_models():
 processor, caption_model, tokenizer, translation_model, device = load_models()
 
 # -------------------- COLORIZATION MODEL --------------------
+import os
+import urllib.request
 
 @st.cache_resource
 def load_color_model():
-    prototxt = "models/models_colorization_deploy_v2.prototxt"
+    os.makedirs("models", exist_ok=True)
+
+    prototxt = "models/colorization_deploy_v2.prototxt"
     model = "models/colorization_release_v2.caffemodel"
     points = "models/pts_in_hull.npy"
+
+    # Download if not exists
+    if not os.path.exists(prototxt):
+        urllib.request.urlretrieve(
+            "https://raw.githubusercontent.com/richzhang/colorization/master/models/colorization_deploy_v2.prototxt",
+            prototxt
+        )
+
+    if not os.path.exists(model):
+        urllib.request.urlretrieve(
+            "https://github.com/richzhang/colorization/releases/download/v2.0/colorization_release_v2.caffemodel",
+            model
+        )
+
+    if not os.path.exists(points):
+        urllib.request.urlretrieve(
+            "https://raw.githubusercontent.com/richzhang/colorization/master/resources/pts_in_hull.npy",
+            points
+        )
 
     net = cv2.dnn.readNetFromCaffe(prototxt, model)
     pts = np.load(points)
@@ -43,8 +66,6 @@ def load_color_model():
     net.getLayer(conv8).blobs = [np.full([1, 313], 2.606, dtype="float32")]
 
     return net
-
-net = load_color_model()
 
 # -------------------- IMAGE ENHANCEMENT --------------------
 
