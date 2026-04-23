@@ -36,23 +36,23 @@ def load_color_model():
     points = "models/pts_in_hull.npy"
 
     if not os.path.exists(prototxt):
-        urllib.request.urlretrieve(
-            "https://raw.githubusercontent.com/richzhang/colorization/master/models/colorization_deploy_v2.prototxt",
-            prototxt
-        )
+    urllib.request.urlretrieve(
+        "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/colorization_deploy_v2.prototxt",
+        prototxt
+    )
 
     if not os.path.exists(model):
         urllib.request.urlretrieve(
-            "https://github.com/richzhang/colorization/releases/download/v2.0/colorization_release_v2.caffemodel",
+            "https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_colorization_20170828/colorization_release_v2.caffemodel",
             model
-        )
+    )
 
-    if not os.path.exists(points):
-        urllib.request.urlretrieve(
-            "https://raw.githubusercontent.com/richzhang/colorization/master/resources/pts_in_hull.npy",
-            points
-        )
-
+if not os.path.exists(points):
+    urllib.request.urlretrieve(
+        "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/pts_in_hull.npy",
+        points
+    )
+        
     net = cv2.dnn.readNetFromCaffe(prototxt, model)
     pts = np.load(points)
 
