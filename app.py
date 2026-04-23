@@ -44,7 +44,16 @@ def download(url, path, min_size):
         download_file(url, path)
 
 # -------------------- COLORIZATION MODEL --------------------
+def download_text(url, path):
+    response = requests.get(url)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(response.text)
 
+def download_binary(url, path):
+    response = requests.get(url, stream=True)
+    with open(path, "wb") as f:
+        for chunk in response.iter_content(8192):
+            f.write(chunk)
 @st.cache_resource
 def load_color_model():
     os.makedirs("models", exist_ok=True)
@@ -54,17 +63,20 @@ def load_color_model():
     points = "models/pts_in_hull.npy"
 
     # small files (GitHub OK)
-    download(
+    if os.path.exists(prototxt):
+        os.remove(prototxt)
+
+    download_text(
         "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/colorization_deploy_v2.prototxt",
-        prototxt,
-        10000
+        prototxt
     )
 
-    download(
-        "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/pts_in_hull.npy",
-        points,
-        10000
-    )
+    # Points file
+    if not os.path.exists(points):
+        download_binary(
+            "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/pts_in_hull.npy",
+            points
+        )
 
     # 🔥 BIG MODEL (Google Drive - stable)
     download(
