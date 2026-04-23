@@ -1,0 +1,7 @@
+streamlit
+opencv-python
+pillow
+numpy
+torch
+torchvision
+transformers==4.40.0
