@@ -67,7 +67,7 @@ def load_color_model():
         )
 
     net = cv2.dnn.readNetFromCaffe(prototxt, model)
-    pts = np.load(points)
+    pts = np.load(points, allow_pickle=True)
 
     class8 = net.getLayerId("class8_ab")
     conv8 = net.getLayerId("conv8_313_rh")
