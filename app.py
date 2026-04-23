@@ -3,9 +3,13 @@ import numpy as np
 import cv2
 from PIL import Image
 import torch
+import os
+import requests
 
 from transformers import BlipProcessor, BlipForConditionalGeneration
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
+torch.set_num_threads(1)
 
 # -------------------- LOAD MODELS --------------------
 
@@ -24,9 +28,22 @@ def load_models():
 
 processor, caption_model, tokenizer, translation_model, device = load_models()
 
+# -------------------- DOWNLOAD HELPER --------------------
+
+def download_file(url, path):
+    response = requests.get(url, stream=True)
+    with open(path, "wb") as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+
+def download(url, path, min_size):
+    if not os.path.exists(path) or os.path.getsize(path) < min_size:
+        if os.path.exists(path):
+            os.remove(path)
+        download_file(url, path)
+
 # -------------------- COLORIZATION MODEL --------------------
-import os
-import urllib.request
 
 @st.cache_resource
 def load_color_model():
@@ -36,13 +53,7 @@ def load_color_model():
     model = "models/colorization_release_v2.caffemodel"
     points = "models/pts_in_hull.npy"
 
-    def download(url, path, min_size):
-        if not os.path.exists(path) or os.path.getsize(path) < min_size:
-            if os.path.exists(path):
-                os.remove(path)
-            urllib.request.urlretrieve(url, path)
-
-    # ✅ Stable OpenCV links
+    # small files (GitHub OK)
     download(
         "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/colorization_deploy_v2.prototxt",
         prototxt,
@@ -50,14 +61,16 @@ def load_color_model():
     )
 
     download(
-        "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_colorization_20170828/colorization_release_v2.caffemodel",
-        model,
-        50000000
-    )
-    download(
         "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/pts_in_hull.npy",
         points,
         10000
+    )
+
+    # 🔥 BIG MODEL (Google Drive - stable)
+    download(
+        "https://drive.google.com/uc?export=download&id=1y7qQzLwF3W8UuP3z6u7t6n2G2x0Kp7Yp",
+        model,
+        50000000
     )
 
     net = cv2.dnn.readNetFromCaffe(prototxt, model)
@@ -71,10 +84,11 @@ def load_color_model():
     net.getLayer(conv8).blobs = [np.full([1, 313], 2.606, dtype="float32")]
 
     return net
-    
+
+# -------------------- COLORIZATION --------------------
 
 def colorize_image(image):
-    net = load_color_model()   
+    net = load_color_model()
 
     img = np.array(image)
 
@@ -100,8 +114,6 @@ def colorize_image(image):
 
     return (colorized * 255).astype("uint8")
 
-
-
 # -------------------- IMAGE ENHANCEMENT --------------------
 
 def enhance_image(image):
@@ -118,15 +130,12 @@ def enhance_image(image):
 
     return Image.fromarray(enhanced_img)
 
-
 # -------------------- CAPTION --------------------
 
 def generate_caption(image):
     image = image.resize((384, 384))
-
     inputs = processor(images=image, return_tensors="pt").to(device)
     output = caption_model.generate(**inputs)
-
     return processor.decode(output[0], skip_special_tokens=True)
 
 # -------------------- TRANSLATION --------------------
@@ -134,7 +143,6 @@ def generate_caption(image):
 def translate_caption(text):
     inputs = tokenizer(text, return_tensors="pt", padding=True)
     outputs = translation_model.generate(**inputs)
-
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
 # -------------------- UI --------------------
